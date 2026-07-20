@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Deriv Trading Platform</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+        #status { padding: 12px; font-weight: bold; border-radius: 6px; margin: 10px 0; }
+        .connected { background: #d4edda; color: green; }
+        .error { background: #f8d7da; color: red; }
+        button { padding: 10px 16px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px 0; width: 300px; }
+        .section { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .active-section { display: block; }
+    </style>
+</head>
+<body>
+    <h1>🚀 My Deriv Trading Platform</h1>
+
+    <!-- Credentials -->
+    <div>
+        <h2>1. Enter Your Credentials</h2>
+        <label>App ID: <input id="33SUI8o0FzT9eH7kyXL4n" placeholder="Your App ID" value=""></label><br>
+        <label>API Token: <input id="pat_67ed7a22d034f23b243163b34bfb92b602ce830d56be3a70437ac0c5aa8d0755" type="password" placeholder="Your API Token"></label><br>
+        <button onclick="saveCredentials()">Save Credentials & Connect</button>
+    </div>
+
+    <div id="status">Enter credentials above first</div>
+
+    <nav>
+        <button onclick="showSection('trading')">Trading</button>
+        <button onclick="showSection('bots')">Bots</button>
+    </nav>
+
+    <!-- Trading Section -->
+    <div id="trading" class="section active-section">
+        <button onclick="authorizeAccount()">Authorize Account</button>
+        <button onclick="getBalance()">Get Balance</button>
+        
+        <div>
+            <label>Symbol: <input id="symbol" value="R_100"></label><br>
+            <label>Contract: <select id="contractType"><option value="CALL">CALL</option><option value="PUT">PUT</option></select></label><br>
+            <label>Stake USD: <input id="stake" type="number" value="10"></label><br>
+            <label>Duration (ticks): <input id="duration" type="number" value="5"></label>
+        </div>
+        
+        <button onclick="getProposal()">Get Proposal</button>
+        <button onclick="buyContract()" style="background:#28a745; color:white;">BUY</button>
+    </div>
+
+    <!-- Bots Section -->
+    <div id="bots" class="section">
+        <h2>Bots Management</h2>
+        <!-- Add your bots logic here later -->
+        <p>Bots section ready for expansion</p>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        let currentProposalId = null;
+        let APP_ID = "33SUI8o0FzT9eH7kyXL4n";
+        let API_TOKEN = "pat_67ed7a22d034f23b243163b34bfb92b602ce830d56be3a70437ac0c5aa8d0755";
+
+        function saveCredentials() {
+            APP_ID = document.getElementById('appId').value.trim();
+            API_TOKEN = document.getElementById('apiToken').value.trim();
+            
+            if (!APP_ID) return alert("Please enter your App ID");
+            
+            connect();
+        }
+
+        function connect() {
+            if (ws) ws.close();
+            const statusEl = document.getElementById('status');
+            
+            ws = new WebSocket(wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID});
+            
+            ws.onopen = () => {
+                isConnected = true;
+                statusEl.textContent = "✅ Connected to Deriv";
+                statusEl.className = "connected";
+                log("Connection successful. Ready to authorize.");
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.error) log(Error: ${data.error.message}, true);
+                else log(Received: ${data.msg_type || 'data'});
+            };
+            
+            ws.onerror = () => {
+                statusEl.textContent = "❌ Connection failed";
+                statusEl.className = "error";
+            };
+        }function authorizeAccount() {
+            if (!isConnected || !API_TOKEN) return alert("Connect and enter token first");
+            ws.send(JSON.stringify({ authorize: API_TOKEN }));
+        }
+
+        function getBalance() {
+            if (isConnected) ws.send(JSON.stringify({ balance: 1 }));
+        }
+
+        function getProposal() {
+            if (!isConnected) return alert("Not connected");
+            ws.send(JSON.stringify({
+                proposal: 1,
+                amount: parseFloat(document.getElementById('stake').value),
+                basis: "stake",
+                contract_type: document.getElementById('contractType').value,
+                currency: "USD",
+                duration: parseInt(document.getElementById('duration').value),
+                duration_unit: "t",
+                symbol: document.getElementById('symbol').value
+            }));
+        }
+
+        function buyContract() {
+            if (currentProposalId) ws.send(JSON.stringify({ buy: currentProposalId, price: parseFloat(document.getElementById('stake').value) }));
+        }
+
+        function log(msg, isError = false) {
+            const output = document.getElementById('output');
+            output.innerHTML += <p>${isError ? '❌' : '✅'} ${msg}</p>;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function showSection(sec) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active-section'));
+            document.getElementById(sec).classList.add('active-section');
+        }
+    </script>
+</body>
+</html>
